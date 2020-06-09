@@ -4,35 +4,27 @@ import (
 	"flag"
 	"fmt"
 	"k8s.io/client-go/kubernetes/scheme"
-	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/ycliu912/kubernetes-crd-example/api/types/v1alpha1"
 	clientV1alpha1 "github.com/ycliu912/kubernetes-crd-example/clientset/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-var kubeconfig string
-
-func init() {
-	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to Kubernetes config file")
-	flag.Parse()
-}
-
 func main() {
-	var config *rest.Config
-	var err error
-
-	if kubeconfig == "" {
-		log.Printf("using in-cluster configuration")
-		config, err = rest.InClusterConfig()
+	var kubeconfig *string
+	if home := homeDir(); home != "" {
+		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	} else {
-		log.Printf("using configuration form '%s'", kubeconfig)
-		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	}
 
+	flag.Parse()
+
+	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
 		panic(err)
 	}
@@ -60,4 +52,11 @@ func main() {
 		time.Sleep(2 * time.Second)
 	}
 
+}
+
+func homeDir() string {
+	if h := os.Getenv("HOME"); h != "" {
+		return h
+	}
+	return os.Getenv("USERPROFILE") // Windows
 }
